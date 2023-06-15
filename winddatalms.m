@@ -1,0 +1,327 @@
+load("WindRHUL.mat");
+
+clearvars;
+
+sysorder = 16;
+mu=1e-8;
+% mu=6e-4;
+mus=2e-3;
+
+load("WindRHUL.mat");
+WIND = WindFs50.';
+
+P=4;
+Q=4;
+
+wind1 = WindFs50(:,1);
+wind2 = WindFs50(:,2);
+wind3 = WindFs50(:,3);
+wind4 = WindFs50(:,4);
+
+% WIND(4,:) = WIND(4,:) - median(WIND(4,:));
+
+% mu=0.0288;
+mu=0.021;
+
+
+T = array2table(WIND.','VariableNames',{'Latitudinal Wind Velocity','Longitudinal Wind Velocity','Altitudinal Wind Velocity','Wind Temperature'}); 
+uitable('Data',T{:,:},'ColumnName',T.Properties.VariableNames,...
+    'RowName',T.Properties.RowNames,'Units', 'Normalized', 'Position',[0, 0, 1, 1]);
+
+
+
+% hold on;
+% title("Multi-Channel Wind data");
+% 
+% xlabel("Hours");
+% ylabel("Avg wind velocity (km/h) and temperature (°C) over hour interval");
+% plot(wind1);
+% plot(wind2,'green');
+% plot(wind3,'magenta')
+% plot(wind4,'red');
+% 
+% legend("Latitudinal velocity", "Longitudinal velocity", "Altitudinal velocity", "Temperature");
+
+% --- SINGLE LMS
+% mu__ = mus;
+% % mu=0.1541;
+k=1;
+[y,w,e,d,mse] = LMSFunc(wind3, k, mu, sysorder);
+mse
+% hold on;
+
+% title(sprintf('Altitudinal Wind Velocity LMS Prediction k=%d mu=%e MSE=%e', k, mu, mse));
+% 
+% xlabel("Hours");
+% ylabel("Avg Altidunal wind velocity over hour interval (km/h)");
+% 
+% plot(d,'r');
+% plot(y,'b');
+% legend("Desired signal", "Predicted signal")
+
+
+% figure, 
+% 
+% plot(e.^2);
+% % % plot(movmean(e,100));
+% % % legend("Error", "100 point moving average Error")
+% title(sprintf('Altitudinal Wind Velocity LMS Squared Error Prediction k=%d mu=%e', k, mu))
+% xlabel("Hours");
+% ylabel("Prediction error squared");
+
+
+
+% ------ MSE/step size
+% % Calculate MU MAX
+% i = 0;
+% % mumax = 1; %1e-9
+% mumax = 1/(0.65*sysorder*bandpower(wind4));
+% npoints = 10000;
+% for t = linspace(0,mumax,10000)
+%     i = i + 1;
+%     [~,~,~,~,mse] = LMSFunc(wind4,1,t,sysorder);
+%     if isnan(mse) 
+%         MSE(i)=0;
+%     else
+%         MSE(i) = mean(mse);
+%     end
+% %     MSE(i) = QLMS(t);
+% end
+% 
+% % MSE(isnan(MSE))=[];
+% 
+% [m,idx]=min(MSE(MSE>0))
+% 
+% semilogy(MSE);
+% title('LMS Wind Temperature Data MSE against stepsize');
+% xlabel(sprintf('Stepsize μ (x %e)',mumax/npoints));
+% ylabel('MSE');
+
+% ------ MSE/Tap Length
+
+% for taps = 1:200
+%     [~,~,~,~,mse] = LMSFunc(wind1,1,mu,taps);
+%     if isnan(mse) 
+%         MSET(taps)=0
+%     else
+%         MSET(taps) = mean(mse);
+%     end
+% end
+% 
+% plot(MSET)
+% title('LMS Stock Data MSE against tap length');
+% xlabel('Number of filter taps');
+% ylabel('MSE');
+% 
+% [best,index] = min(MSET)
+
+% ----- MSE/Prediction ahead
+% 
+% for k = 1:100
+%     [~,~,~,~,mse] = LMSFunc(wind1,k,mu,sysorder);
+%     if isnan(mse) 
+%         MSEP(k)=0
+%     else
+%         MSEP(k) = mean(mse);
+%     end
+% end
+% 
+% plot(MSEP)
+% title('LMS Wind Data Prediction Horizon');
+% xlabel('k samples in the future x(n+k)');
+% ylabel('MSE');
+% 
+% [best,index] = min(MSEP);
+
+% --- MULTI LMS
+% 
+% hold on;
+k=1;
+[y,W,e,d,mse] = MLMSFunc(WIND,1,mu,P,Q,sysorder);
+mse(3)
+
+% title(sprintf('Altitudinal Wind Velcoity MLMS Prediction k=%d mu=%e taplength=%d MSE=%e', k, mu, sysorder, mse(3)))
+% % 
+% % 
+% 
+% plot(d(3,:),'r');
+% plot(y(3,:),'b');
+% 
+% xlabel("Hours");
+% ylabel("Avg Altidunal wind velocity over hour interval (km/h)");
+% 
+% 
+% legend("Desired signal", "Predicted signal")
+
+% plot(e(3,:).^2);
+% % % plot(movmean(e,100));
+% % % legend("Error", "100 point moving average Error")
+% title(sprintf('Altitudinal Wind Velocity MLMS Squared Error Prediction k=%d mu=%e MSE=%e', k, mu, mse(3)))
+% xlabel("Hours");
+% ylabel("Prediction error squared");
+
+
+% mse = mean(mse)
+% hold on;
+% d = d.';
+% y = y.';
+% plot(d);
+% plot(y);
+% plot(d(1,:),'r');
+% plot(d(2,:),'g');
+% plot(d(3,:),'b');
+% plot(d(4,:),'yellow');
+% plot(y(1,:),'b');
+% plot(d(2,:),'g');
+% plot(d(3,:),'b');
+% plot(d(4,:),'yellow');
+% figure,
+% plot(abs(e(1,:)),'r');
+% plot(abs(e(2,:)),'g');
+% plot(abs(e(3,:)),'b');
+% plot(abs(e(4,:)),'yellow');
+% set(gca,'yscale','log')
+
+
+% ------ MSE/step size
+
+% i = 0;
+% mumax = 1/(0.75*sysorder*sum(bandpower(WIND.'))); %1e-9
+% for t = linspace(0,mumax,100)
+%     i = i + 1;
+%     [~,~,~,~,mse] = MLMSFunc(WIND,1,t,P,Q,sysorder);
+%     if isnan(mse) 
+%         MSE(i)=0;
+%     else
+%         MSE(i) = mean(mse);
+%     end
+% %     MSE(i) = QLMS(t);
+% end
+% 
+% % MSE(isnan(MSE))=[];
+% 
+% [m,idx]=min(MSE(MSE>0))
+% 
+% semilogy(MSE);
+% title('MLMS Wind Data MSE against stepsize');
+% xlabel(sprintf('Stepsize μ (x %e)',mumax/100));
+% ylabel('MSE');
+
+
+% ------ MSE/Tap Length
+
+% for taps = 1:200
+%     [~,~,~,~,mse] = MLMSFunc(WIND,1,mu,P,Q,taps);
+%     if isnan(mse) 
+%         MSET(taps)=0
+%     else
+%         MSET(taps) = mean(mse);
+%     end
+% end
+% 
+% plot(MSET)
+% title('MLMS Wind Data MSE against tap length');
+% xlabel('Number of filter taps');
+% ylabel('MSE');
+
+% [best,index] = min(MSET)
+
+% ----- MSE/Prediction ahead
+
+% for k = 1:100
+%     [~,~,~,~,mse] = MLMSFunc(WIND,k,mu,P,Q,sysorder);
+%     if isnan(mse) 
+%         MSEP(k)=0
+%     else
+%         MSEP(k) = mean(mse);
+%     end
+% end
+% 
+% plot(MSEP)
+% title('MLMS Wind Data Prediction Horizon');
+% xlabel('k samples in the future x(n+k)');
+% ylabel('MSE');
+% 
+% [best,index] = min(MSEP);
+
+
+
+% --- QUATERNION LMS
+
+k=1;
+QWIND = quaternion(WIND(1,:).',WIND(2,:).',WIND(3,:).',WIND(4,:).');
+[y,w,e,d,mse] = QLMSFunc(QWIND,1,mu,sysorder);
+mse(3)
+hold on;
+% title(sprintf('Altitudinal Wind Velcoity QLMS Prediction k=%d mu=%e taplength=%d MSE=%e', k, mu, sysorder, mse(3)))
+% % 
+% % 
+% 
+% plot(d.y,'r');
+% plot(y.y,'b');
+% 
+% xlabel("Hours");
+% ylabel("Avg Altidunal wind velocity over hour interval");
+% 
+% 
+% legend("Desired signal", "Predicted signal")
+
+% plot((e.y).^2);
+% % % plot(movmean(e,100));
+% % % legend("Error", "100 point moving average Error")
+% title(sprintf('Altitudinal Wind Velocity QLMS Squared Error Prediction k=%d mu=%e MSE=%e', k, mu, mse(3)))
+% xlabel("Hours");
+% ylabel("Prediction error squared");
+
+% mse
+
+% -- MSE/MU
+
+% i = 0;
+% % mumax = 0.75e-2; %1e-9
+% mumax = 2/(1*sysorder*sum(bandpower(WIND.'))); %1e-9
+% for t = linspace(0,mumax,100)
+%     i = i + 1;
+%     [~,~,~,~,mse] = QLMSFunc(QWIND,1,t,sysorder);
+%     if isnan(mse) 
+%         MSE(i)=0;
+%     else
+%         MSE(i) = mse(3);
+%     end
+% %     MSE(i) = QLMS(t);
+% end
+% 
+% % MSE(isnan(MSE))=[];
+% 
+% [m,idx]=min(MSE(MSE>0))
+% 
+% semilogy(MSE);
+% title('QLMS Wind Data MSE against stepsize');
+% xlabel(sprintf('Stepsize μ (x %e)',mumax/100));
+% ylabel('MSE');
+
+% ------ MSE/Tap Length
+
+
+
+% ----- MSE/Prediction ahead
+
+% for k = 1:100
+%     [~,~,~,~,mse] = QLMSFunc(QWIND,k,mu,sysorder);
+%     if isnan(mse) 
+%         MSEP(k)=0
+%     else
+%         MSEP(k) = mean(mse);
+%     end
+% end
+% 
+% plot(MSEP)
+% title('QLMS Wind Data Prediction Horizon L=16 mu=1e-8');
+% xlabel('k samples in the future x(n+k)');
+% ylabel('MSE');
+% 
+% [best,index] = min(MSEP);
+% ------------
+% [~,~,~,~,mse] = QLMSFunc(QSP500,1,mu,sysorder)
+ 
+

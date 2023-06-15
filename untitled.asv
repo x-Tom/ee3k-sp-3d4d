@@ -1,0 +1,14 @@
+for q = 1:4
+    for n = sysorder : N-1 
+%       u = transpose(x(q,n:-1:n-sysorder+1));
+        hx = 0;
+        for p = 1:4 
+            u = transpose(x(p,n:-1:n-sysorder+1));
+            Wpq = W(p,q,:);
+            hx = hx + Wpq.' * u;
+        end
+        y(n) = hx;
+        e(n) = d(q,n+1) - y(n);
+        W(,q,) + mu * e(n) * u;
+    end
+end
